@@ -1,9 +1,9 @@
 name: Publicar Tasa BCV
 on:
   schedule:
-    # La hora es en formato UTC. 
-    # Venezuela (VET) es UTC-4. Para las 5:00 PM (17:00), ponemos 21:00 UTC.
-    - cron: '0 21 * * *'
+    # 21:15 UTC es 5:15 PM en Venezuela
+    # '1-5' significa de Lunes (1) a Viernes (5)
+    - cron: '15 21 * * 1-5'
   workflow_dispatch: # Esto permite probarlo manualmente
 
 jobs:
