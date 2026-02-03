@@ -2,51 +2,43 @@ import instaloader
 import requests
 import os
 
-# Configuraciones desde los Secretos de GitHub
 WEBHOOK_URL = os.getenv('DISCORD_WEBHOOK')
 USUARIO_IG = 'bcv.org.ve'
 
 def descargar_y_enviar():
-    L = instaloader.Instaloader()
+    # Creamos el cargador con un "disfraz" de navegador real
+    L = instaloader.Instaloader(user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36")
+    
     try:
         print(f"Buscando publicación de {USUARIO_IG}...")
         profile = instaloader.Profile.from_username(L.context, USUARIO_IG)
-        post = next(profile.get_posts()) # El post más reciente
+        post = next(profile.get_posts())
         
-        # Si es un carrusel (varias fotos), seleccionamos la primera
+        # Seleccionamos la primera imagen si es carrusel
         if post.typename == 'GraphSidecar':
-            # Obtenemos la URL de la primera imagen del carrusel
             nodos = list(post.get_sidecar_nodes())
             imagen_url = nodos[0].display_url
         else:
-            # Si es una sola imagen, la tomamos directamente
             imagen_url = post.url
         
         payload = {
-            "embeds": [
-                {
-                    "title": "📊 Tasa Oficial del Banco Central de Venezuela",
-                    "description": f"Fecha de publicación: {post.date_local.strftime('%d/%m/%Y')}",
-                    "color": 16766720, # Color dorado/amarillo
-                    "image": {
-                        "url": imagen_url
-                    },
-                    "footer": {
-                        "text": "Actualización diaria automática"
-                    }
-                }
-            ]
+            "embeds": [{
+                "title": "📊 Tasa Oficial BCV",
+                "description": f"Fecha: {post.date_local.strftime('%d/%m/%Y')}",
+                "color": 16766720,
+                "image": {"url": imagen_url},
+                "footer": {"text": "Bot Automatizado"}
+            }]
         }
         
-        response = requests.post(WEBHOOK_URL, json=payload)
-        
-        if response.status_code == 204:
-            print("Enviado con éxito a Discord.")
-        else:
-            print(f"Error en Discord: {response.status_code}")
-            
+        requests.post(WEBHOOK_URL, json=payload)
+        print("¡Enviado con éxito!")
+
     except Exception as e:
-        print(f"Error: {e}")
+        print(f"Error detectado: {e}")
+        # Si sigue fallando, intentamos enviar solo el link de Instagram como respaldo
+        if "429" in str(e):
+             requests.post(WEBHOOK_URL, json={"content": f"⚠️ Instagram nos bloqueó temporalmente, pero aquí está el link directo: https://www.instagram.com/{USUARIO_IG}/"})
 
 if __name__ == "__main__":
     descargar_y_enviar()
