@@ -5,7 +5,7 @@ Este bot extrae automáticamente las tasas oficiales del **Banco Central de Vene
 ##  Características
 * **Precisión:** Redondeo estricto a 2 decimales.
 * **Multiservidor:** Envío simultáneo a varios servidores con colores personalizados (Morado, Azul, etc.).
-* **Automatización:** Funciona solo de lunes a viernes a las 6:45 AM (VET) mediante GitHub Actions.
+* **Automatización:** Envía una publicación de Marte a viernes a las 5:45 AM GMT-4:00 mediante GitHub Actions.
 * **Seguridad:** Uso de Secrets para proteger los Webhooks de Discord.
 
 ##  Cómo funciona
