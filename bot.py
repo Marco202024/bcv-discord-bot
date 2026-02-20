@@ -3,7 +3,7 @@ from bs4 import BeautifulSoup
 import os
 import re
 
-# Morado: 10181046 | Azul: 3447003 | Verde: 3066993 | Dorado: 15844367
+# colores para mostrar en los servidores, Morado: 10181046 | Azul: 3447003 | Verde: 3066993 | Dorado: 15844367
 SERVIDORES = [
     {
         "url": os.getenv('DISCORD_WEBHOOK'),
@@ -14,7 +14,7 @@ SERVIDORES = [
         "color": 10181046   # morado para el segundo server (puedes cambiarlo)
     }
 ]
-
+#El codigo leerá los datos disponibles directo del banco central de Venezuela
 URL_BCV = "https://www.bcv.org.ve/"
 
 def limpiar_y_formatear(texto):
@@ -27,7 +27,7 @@ def limpiar_y_formatear(texto):
         return "{:,.2f}".format(valor_final).replace('.', 'X').replace(',', '.').replace('X', ',')
     except:
         return texto
-
+#extracción de Datos directo desde el banco central de Venezuela
 def obtener_tasas():
     try:
         headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36'}
@@ -48,7 +48,7 @@ def obtener_tasas():
                 
     except Exception as e:
         print(f"Error general: {e}")
-
+#Formato de salida para los servidores de Discord
 def enviar_a_discord(url, color, dolar, euro, fecha):
     payload = {
         "embeds": [{
