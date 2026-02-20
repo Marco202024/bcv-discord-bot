@@ -3,7 +3,6 @@ from bs4 import BeautifulSoup
 import os
 import re
 
-# Configuración de Servidores: https://birdie0.github.io/discord-webhooks-guide/structure/embed/color.html
 # Morado: 10181046 | Azul: 3447003 | Verde: 3066993 | Dorado: 15844367
 SERVIDORES = [
     {
