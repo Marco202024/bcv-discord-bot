@@ -17,12 +17,11 @@ jobs:
         with:
           python-version: '3.9'
 
-      - name: Instalar librerías
+      - name: Instalar dependencias
         run: |
-          pip install requests beautifulsoup4
+          pip install -r requirements.txt
 
-      - name: Ejecutar script
-      #envio a servidores de discord
+      - name: Ejecutar bot
         env:
           DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
           DISCORD_WEBHOOK_2: ${{ secrets.DISCORD_WEBHOOK_2 }}
