@@ -20,9 +20,9 @@ class BCVModel:
         return BeautifulSoup(response.content, 'html.parser')
 
     @staticmethod
-    def procesar_precio(texto):
+    def procesar_precio(texto_sucio):
         try:
-            limpio = re.sub(r'[^0-9,.]', '', texto)
+            limpio = re.sub(r'[^0-9,.]', '', texto_sucio)
             if ',' in limpio and '.' in limpio:
                 limpio = limpio.replace('.', '')
             valor_punto = limpio.replace(',', '.')
@@ -38,14 +38,13 @@ class BCVModel:
             with open('ultimo_precio.txt', 'r') as file:
                 return file.read().strip()
         except FileNotFoundError:
-            return ""  # Si el archivo no existe aún, devuelve vacío
+            return "" # Si el archivo no existe aún, devuelve vacío
 
     @staticmethod
     def guardar_memoria(nuevo_registro):
         """Guarda el nuevo precio para el día siguiente."""
         with open('ultimo_precio.txt', 'w') as file:
             file.write(nuevo_registro)
-
 
 # ==========================================
 # 2. VISTA (Lógica de Formato y Apariencia)
@@ -59,25 +58,16 @@ class DiscordView:
     def crear_mensaje_embed(cls, dolar, euro, fecha, color):
         return {
             "embeds": [{
-            "title": "🏛️ BCV | Tasa de Cambio Oficial",
-            "description": f"📅 **Fecha:** {fecha}\n",
-            "color": color,
-            "fields": [
-                {
-                    "name": "**💵 Dólar (USD)**",
-                    "value": "**```diff\n+ " + dolar + " Bs.\n```**",
-                    "inline": True
-                },
-                {
-                    "name": "**💶 Euro (EUR)**",
-                    "value": "**```yaml\n" + euro + " Bs.\n```**",
-                    "inline": True
-                }
-            ],
-            "footer": {"text": "Datos extraídos de bcv.org.ve"}
+                "title": "🏦 Tasas Oficiales BCV",
+                "description": f"📅 Fecha valor: **{fecha}**",
+                "color": color,
+                "fields": [
+                    {"name": "💵 Dólar (USD)", "value": f"**{cls.formatear_moneda(dolar)} Bs.**", "inline": True},
+                    {"name": "💶 Euro (EUR)", "value": f"**{cls.formatear_moneda(euro)} Bs.**", "inline": True}
+                ],
+                "footer": {"text": "Datos extraídos de bcv.org.ve"}
             }]
         }
-
 
 # ==========================================
 # 3. CONTROLADOR (Lógica de Condición)
@@ -86,7 +76,8 @@ class BotController:
     def __init__(self):
         # colores para mostrar en los servidores, Morado: 10181046 | Azul: 3447003 | Verde: 3066993 | Dorado: 15844367
         self.servidores = [
-            {"url": os.getenv('DISCORD_WEBHOOK'), "color": 14614410},
+            {"url": os.getenv('DISCORD_WEBHOOK'), "color": 10181046},
+            {"url": os.getenv('DISCORD_WEBHOOK_2'), "color": 3447003}
         ]
 
     def ejecutar(self):
@@ -107,7 +98,7 @@ class BotController:
             # 3. La Condición Mágica: ¿Son iguales?
             if registro_actual == registro_anterior:
                 print("Los precios no han cambiado desde la última publicación. Abortando envío.")
-                return  # Detiene la ejecución aquí mismo
+                return # Detiene la ejecución aquí mismo
 
             # 4. Si son distintos, publicamos
             print("Nuevos precios detectados. Iniciando envíos...")
@@ -124,7 +115,7 @@ class BotController:
         except Exception as e:
             print(f"Falla crítica: {e}")
 
-
 if __name__ == "__main__":
     bot = BotController()
     bot.ejecutar()
+    
