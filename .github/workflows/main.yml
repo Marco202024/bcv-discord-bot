@@ -8,6 +8,11 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    
+    # IMPORTANTE: Permisos para que el bot pueda guardar la memoria en GitHub
+    permissions:
+      contents: write 
+
     steps:
       - name: Checkout del código
         uses: actions/checkout@v3
@@ -18,11 +23,18 @@ jobs:
           python-version: '3.9'
 
       - name: Instalar dependencias
-        run: |
-          pip install -r requirements.txt
+        run: pip install -r requirements.txt
 
       - name: Ejecutar bot
         env:
           DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
           DISCORD_WEBHOOK_2: ${{ secrets.DISCORD_WEBHOOK_2 }}
         run: python bot.py
+
+      - name: Guardar nueva memoria en el repositorio
+        run: |
+          git config --global user.name "GitHub Actions Bot"
+          git config --global user.email "actions@github.com"
+          git add ultimo_precio.txt
+          # Esto solo guarda los cambios si el archivo fue modificado
+          git diff --quiet && git diff --staged --quiet || (git commit -m "Actualizar memoria del bot" && git push)
