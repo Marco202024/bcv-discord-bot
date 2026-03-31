@@ -1,6 +1,3 @@
-![Python](https://img.shields.io/badge/Python-3.9+-blue?style=for-the-badge&logo=python)
-![Framework](https://img.shields.io/badge/Architecture-MVC-green?style=for-the-badge)
-![License](https://img.shields.io/badge/License-MIT-yellow?style=for-the-badge)
 #  Bot de Tasas BCV para Discord
 
 Este bot extrae automáticamente las tasas oficiales del **Banco Central de Venezuela** directamente desde su sitio web y las publica en múltiples servidores de Discord.
@@ -21,3 +18,6 @@ Este bot extrae automáticamente las tasas oficiales del **Banco Central de Vene
 *Desarrollado como proyecto de automatización con Python.*
 
 ![Seguridad](https://img.shields.io/github/actions/workflow/status/Marco202024/bcv-discord-bot/main.yml?label=Seguridad&style=for-the-badge)
+![Python](https://img.shields.io/badge/Python-3.9+-blue?style=for-the-badge&logo=python)
+![Framework](https://img.shields.io/badge/Architecture-MVC-green?style=for-the-badge)
+![License](https://img.shields.io/badge/License-MIT-yellow?style=for-the-badge)
