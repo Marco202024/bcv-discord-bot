@@ -53,7 +53,7 @@ class DiscordView:
     def crear_mensaje_embed(cls, dolar, euro, fecha, color):
         return {
             "embeds": [{
-                "title": "🏦 Nuevas Tasas Oficiales BCV",
+                "title": "🏦 Tasas Oficiales BCV",
                 "description": f"📅 Fecha valor: **{fecha}**",
                 "color": color,
                 "fields": [
