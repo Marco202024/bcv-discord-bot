@@ -74,8 +74,8 @@ class DiscordView:
                     "inline": True
                 }
             ],
-            "footer": {
-                "text": "bcv.org.ve"}]
+            "footer": {"text": "Datos extraídos de bcv.org.ve"}
+            }]
         }
 
 
