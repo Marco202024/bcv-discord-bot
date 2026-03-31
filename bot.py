@@ -69,6 +69,7 @@ class DiscordView:
 # ==========================================
 class BotController:
     def __init__(self):
+        # colores para mostrar en los servidores, Morado: 10181046 | Azul: 3447003 | Verde: 3066993 | Dorado: 15844367
         self.servidores = [
             {"url": os.getenv('DISCORD_WEBHOOK'), "color": 10181046},
             {"url": os.getenv('DISCORD_WEBHOOK_2'), "color": 3447003}
