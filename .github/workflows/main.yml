@@ -1,15 +1,13 @@
-name: Publicar Tasa BCV
-#hora de la publicación, desfazado 12.5 horas porque la hora de la publicación bcv no es consistente.
+name: Publicar Tasa BCV por Fecha
 on:
   schedule:
-    - cron: '0 4 * * 1-5'
+    # Corre todos los días a las 04:00 UTC (00:00 Venezuela)
+    - cron: '0 4 * * *' 
   workflow_dispatch: 
 
 jobs:
   build:
     runs-on: ubuntu-latest
-    
-    # IMPORTANTE: Permisos para que el bot pueda guardar la memoria en GitHub
     permissions:
       contents: write 
 
@@ -31,10 +29,12 @@ jobs:
           DISCORD_WEBHOOK_2: ${{ secrets.DISCORD_WEBHOOK_2 }}
         run: python bot.py
 
-      - name: Guardar nueva memoria en el repositorio
+      - name: Guardar cambio de fecha en el repo
         run: |
-          git config --global user.name "GitHub Actions Bot"
+          git config --global user.name "GitHub Actions"
           git config --global user.email "actions@github.com"
-          git add ultimo_precio.txt
-          # Esto solo guarda los cambios si el archivo fue modificado
-          git diff --quiet && git diff --staged --quiet || (git commit -m "Actualizar memoria del bot" && git push)
+          if [ -f ultima_fecha.txt ]; then
+            git add ultima_fecha.txt
+            git diff --quiet && git diff --staged --quiet || (git commit -m "Actualizar fecha del bot" && git push)
+          fi
+          
