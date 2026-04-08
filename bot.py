@@ -59,7 +59,7 @@ class DiscordView:
                     {"name": "💵 Dólar (USD)", "value": f"**{cls.formatear_moneda(dolar)} Bs.**", "inline": True},
                     {"name": "💶 Euro (EUR)", "value": f"**{cls.formatear_moneda(euro)} Bs.**", "inline": True}
                 ],
-                "footer": {"text": "Validación por fecha detectada"}
+                "footer": {"text": "Datos extraídos de bcv.org.ve"}
             }]
         }
 
