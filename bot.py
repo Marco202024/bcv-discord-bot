@@ -37,7 +37,7 @@ class BCVModel:
                 limpio = limpio.replace('.', '')
             valor_punto = limpio.replace(',', '.')
             return float(valor_punto)
-        except (ValueError, TypeError):  # Capturamos solo los errores esperados
+        except (ValueError, TypeError): 
             return 0.0
 
     @staticmethod
