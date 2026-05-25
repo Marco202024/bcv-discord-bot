@@ -21,7 +21,6 @@ class BCVModel:
     def obtener_html() -> Optional[BeautifulSoup]:
         """Realiza la petición HTTP y devuelve el objeto BeautifulSoup o None si falla."""
         try:
-            # El uso de timeout es obligatorio en entornos profesionales
             response = requests.get(BCV_URL, headers=HEADERS, verify=False, timeout=TIMEOUT_REQ)
             response.raise_for_status()  # Lanza excepción si el status HTTP es de error (ej. 500, 404)
             return BeautifulSoup(response.content, 'html.parser')
