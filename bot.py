@@ -110,7 +110,7 @@ class DiscordView:
     def crear_mensaje_embed(self, tasa: TasaCambio, color: int) -> Dict[str, Any]:
         return {
             "embeds": [{
-                "title": "🏦 Reporte Oficial BCV",
+                "title": "🏦 Marco es el Puto amo",
                 "description": f"📅 **Fecha Valor:** {tasa.fecha}",
                 "color": color,
                 "fields": [
