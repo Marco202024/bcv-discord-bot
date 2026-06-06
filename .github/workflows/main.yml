@@ -2,7 +2,7 @@ name: Publicar Tasa BCV por Fecha
 on:
   schedule:
     # Corre todos los días a las 04:00 UTC (00:00 Venezuela)
-    - cron: '0 4 * * *' 
+    - cron: '12 4 * * *' 
   workflow_dispatch: 
 
 jobs:
