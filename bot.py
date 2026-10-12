@@ -1,156 +1,192 @@
 import os
 import re
+import pickle
 import requests
 from bs4 import BeautifulSoup
-import discord
-from discord.ext import commands, tasks
+from typing import Dict, List, Optional, Any
 
 # ==========================================
 # CONSTANTES Y CONFIGURACIÓN GLOBALES
 # ==========================================
 BCV_URL = "https://www.bcv.org.ve/"
 HEADERS = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'}
-
-# Configuramos los intents del bot
-intents = discord.Intents.default()
-intents.message_content = True
-bot = commands.Bot(command_prefix="!", intents=intents)
+ARCHIVO_HISTORIAL = 'historial_tasas.dat'
+TIMEOUT_REQ = 10  
 
 # ==========================================
 # 1. ENTIDADES Y MODELO (Gestión de Datos)
 # ==========================================
-class BCVModel:
-    @staticmethod
-    def obtener_datos():
+
+class TasaCambio:
+    """Objeto que representa la entidad de datos encapsulada."""
+    def __init__(self, dolar: float, euro: float, fecha: str) -> None:
+        self.__dolar = dolar
+        self.__euro = euro
+        self.__fecha = fecha
+
+    @property
+    def dolar(self) -> float:
+        return self.__dolar
+
+    @property
+    def euro(self) -> float:
+        return self.__euro
+
+    @property
+    def fecha(self) -> str:
+        return self.__fecha
+
+    def __str__(self) -> str:
+        return f"[{self.fecha}] USD: {self.dolar} | EUR: {self.euro}"
+
+
+class ManejadorHistorial:
+    """Clase encargada exclusivamente de la serialización del historial en binario."""
+    def __init__(self, ruta: str) -> None:
+        self.__ruta = ruta
+
+    def cargar_historial(self) -> List[TasaCambio]:
+        """Carga la lista de objetos TasaCambio desde el archivo binario."""
         try:
-            response = requests.get(BCV_URL, headers=HEADERS, verify=False, timeout=10)
+            with open(self.__ruta, 'rb') as archivo:
+                return pickle.load(archivo)
+        except (OSError, EOFError):
+            print("No se encontró el historial previo o está vacío. Iniciando historial nuevo.")
+            return []
+
+    def guardar_historial(self, historial: List[TasaCambio]) -> None:
+        """Sobrescribe el archivo binario con la lista actualizada de objetos."""
+        with open(self.__ruta, 'wb') as archivo:
+            pickle.dump(historial, archivo)
+
+
+class BCVModel:
+    """Modelo principal que orquesta la lógica de negocio y los datos."""
+    def __init__(self) -> None:
+        self.__archivo = ManejadorHistorial(ARCHIVO_HISTORIAL)
+        self.__historial_tasas: List[TasaCambio] = self.__archivo.cargar_historial()
+
+    def obtener_html(self) -> Optional[BeautifulSoup]:
+        try:
+            response = requests.get(BCV_URL, headers=HEADERS, verify=False, timeout=TIMEOUT_REQ)
             response.raise_for_status()
-            soup = BeautifulSoup(response.content, 'html.parser')
-            
-            fecha = soup.find(class_="date-display-single").get_text().strip()
-            d_raw = soup.find(id="dolar").get_text()
-            e_raw = soup.find(id="euro").get_text()
-            
-            return {
-                "fecha": fecha,
-                "dolar": BCVModel.__limpiar_precio(d_raw),
-                "euro": BCVModel.__limpiar_precio(e_raw)
-            }
-        except Exception as e:
-            print(f"Error obteniendo datos del BCV: {e}")
+            return BeautifulSoup(response.content, 'html.parser')
+        except requests.RequestException as e:
+            print(f"Error de conexión al BCV: {e}")
             return None
 
-    @staticmethod
-    def __limpiar_precio(texto_sucio: str) -> float:
+    def procesar_precio(self, texto_sucio: str) -> float:
         try:
             limpio = re.sub(r'[^0-9,.]', '', texto_sucio)
             if ',' in limpio and '.' in limpio:
                 limpio = limpio.replace('.', '')
-            return float(limpio.replace(',', '.'))
-        except:
+            valor_punto = limpio.replace(',', '.')
+            return float(valor_punto)
+        except (ValueError, TypeError): 
             return 0.0
+
+    def verificar_fecha_existe(self, fecha: str) -> bool:
+        """Verifica en memoria si la fecha ya está en el historial de objetos."""
+        for tasa in self.__historial_tasas:
+            if tasa.fecha == fecha:
+                return True
+        return False
+
+    def registrar_nueva_tasa(self, nueva_tasa: TasaCambio) -> None:
+        """Agrega el nuevo objeto a la lista y manda a guardar el archivo serializado."""
+        self.__historial_tasas.append(nueva_tasa)
+        self.__archivo.guardar_historial(self.__historial_tasas)
+        print(f"Registrado exitosamente en historial: {nueva_tasa}")
+
 
 # ==========================================
 # 2. VISTA (Formato de Interfaz)
 # ==========================================
+class DiscordView:
+    """Encargada estrictamente de dar formato a los datos para el usuario/cliente."""
+    def __formatear_moneda(self, numero: float) -> str:
+        return f"{numero:,.2f}".replace('.', 'X').replace(',', '.').replace('X', ',')
 
-class ModalCalculadora(discord.ui.Modal):
-    def __init__(self, tasa_usd: float, tasa_eur: float, tipo: str):
-        super().__init__(title=f"Calculadora BCV ({tipo})")
-        self.tasa_usd = tasa_usd
-        self.tasa_eur = tasa_eur
-        self.tipo = tipo
+    def crear_mensaje_embed(self, tasa: TasaCambio, color: int) -> Dict[str, Any]:
+        return {
+            "embeds": [{
+                "title": "🏦 Reporte Oficial BCV",
+                "description": f"📅 **Fecha Valor:** {tasa.fecha}",
+                "color": color,
+                "fields": [
+                    {"name": "💵 Dólar (USD)", "value": f"**{self.__formatear_moneda(tasa.dolar)} Bs.**", "inline": True},
+                    {"name": "💶 Euro (EUR)", "value": f"**{self.__formatear_moneda(tasa.euro)} Bs.**", "inline": True}
+                ],
+                "footer": {"text": "Datos extraídos de bcv.org.ve"}
+            }]
+        }
 
-        self.monto_input = discord.ui.inputText(
-            label=f"Ingrese la cantidad en {tipo}",
-            placeholder="Ej. 50 o 1500.50",
-            min_length=1,
-            max_length=15
-        )
-        self.add_item(self.monto_input)
-
-    async def callback(self, interaction: discord.Interaction):
-        try:
-            valor = float(self.monto_input.value.replace(',', '.'))
-            if self.tipo == "USD":
-                bs_dolar = valor * self.tasa_usd
-                bs_euro = valor * self.tasa_eur
-                mensaje = (
-                    f"🧮 **Resultado del Cálculo:**\n"
-                    f"💵 **{valor:,.2f} USD** = `{bs_dolar:,.2f} Bs.`\n"
-                    f"💶 **{valor:,.2f} EUR** = `{bs_euro:,.2f} Bs.`"
-                ).replace('.', 'X').replace(',', '.').replace('X', ',')
-            else:
-                usd = valor / self.tasa_usd if self.tasa_usd > 0 else 0
-                eur = valor / self.tasa_eur if self.tasa_eur > 0 else 0
-                mensaje = (
-                    f"🧮 **Resultado del Cálculo:**\n"
-                    f"🇻🇪 **{valor:,.2f} Bs.**\n"
-                    f"💵 Equivale a: `__{usd:,.2f} USD__`\n"
-                    f"💶 Equivale a: `__{eur:,.2f} EUR__`"
-                ).replace('.', 'X').replace(',', '.').replace('X', ',')
-
-            await interaction.response.send_message(mensaje, ephemeral=True)
-        except ValueError:
-            await interaction.response.send_message("❌ Por favor, ingresa un número válido.", ephemeral=True)
-
-class VistaCalculadora(discord.ui.View):
-    def __init__(self, tasa_usd: float, tasa_eur: float):
-        super().__init__(timeout=None)
-        self.tasa_usd = tasa_usd
-        self.tasa_eur = tasa_eur
-
-    @discord.ui.button(label="🧮 Calcular desde USD", style=discord.ButtonStyle.green, custom_id="calc_usd")
-    async def boton_usd(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await interaction.response.send_modal(ModalCalculadora(self.tasa_usd, self.tasa_eur, "USD"))
-
-    @discord.ui.button(label="🧮 Calcular desde Bolívares", style=discord.ButtonStyle.blurple, custom_id="calc_bs")
-    async def boton_bs(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await interaction.response.send_modal(ModalCalculadora(self.tasa_usd, self.tasa_eur, "Bolívares"))
 
 # ==========================================
 # 3. CONTROLADOR (Orquestador)
 # ==========================================
+class BotController:
+    """Intermediario entre la Vista y el Modelo."""
+    def __init__(self, modelo: BCVModel, vista: DiscordView) -> None:
+        self.__modelo = modelo
+        self.__vista = vista
+        self.__servidores: List[Dict[str, Any]] = [
+            {"url": os.getenv('DISCORD_WEBHOOK'), "color": 10181046},
+            {"url": os.getenv('DISCORD_WEBHOOK_2'), "color": 3447003}
+        ]
 
-@bot.event
-async def on_ready():
-    print(f'¡Bot conectado exitosamente como {bot.user}!')
-    verificar_tasas_bcv.start()
+    def ejecutar(self) -> None:
+        soup = self.__modelo.obtener_html()
 
-@bot.tree.command(name="tasa", description="Muestra la tasa actual del BCV con calculadora interactiva")
-async def tasa_cmd(interaction: discord.Interaction):
-    datos = BCVModel.obtener_datos()
-    if not datos:
-        await interaction.response.send_message("❌ No se pudo conectar con el BCV en este momento.", ephemeral=True)
-        return
+        if not soup:
+            print("No se pudo procesar la página web del BCV.")
+            return
 
-    d_fmt = f"{datos['dolar']:,.2f}".replace('.', 'X').replace(',', '.').replace('X', ',')
-    e_fmt = f"{datos['euro']:,.2f}".replace('.', 'X').replace(',', '.').replace('X', ',')
+        try:
+            fecha_elemento = soup.find(class_="date-display-single")
+            if not fecha_elemento:
+                print("No se encontró la clase de la fecha. ¿Cambió el diseño web?")
+                return
 
-    embed = discord.Embed(
-        title="🏦 Tasas Oficiales BCV",
-        description=f"📅 **Fecha Valor:** {datos['fecha']}",
-        color=10181046
-    )
-    embed.add_field(name="💵 Dólar (USD)", value=f"**{d_fmt} Bs.**", inline=True)
-    embed.add_field(name="💶 Euro (EUR)", value=f"**{e_fmt} Bs.**", inline=True)
-    embed.set_footer(text="Usa los botones de abajo para calcular conversiones al instante")
+            fecha_bcv = fecha_elemento.get_text().strip()
 
-    view = VistaCalculadora(datos['dolar'], datos['euro'])
-    await interaction.response.send_message(embed=embed, view=view)
+            if self.__modelo.verificar_fecha_existe(fecha_bcv):
+                print(f"La fecha '{fecha_bcv}' ya se encuentra en el historial. No hay cambios.")
+                return
 
-# Tarea automática opcional (Ejecuta una verificación periódica)
-@tasks.loop(hours=2)
-async def verificar_tasas_bcv():
-    # Aquí puedes programar la lógica si deseas que el bot anuncie automáticamente en un canal específico
-    pass
+            print(f"¡Nueva fecha detectada!: {fecha_bcv}. Publicando...")
+
+            d_raw = soup.find(id="dolar").get_text() if soup.find(id="dolar") else "0"
+            e_raw = soup.find(id="euro").get_text() if soup.find(id="euro") else "0"
+
+            tasa_actual = TasaCambio(
+                dolar=self.__modelo.procesar_precio(d_raw),
+                euro=self.__modelo.procesar_precio(e_raw),
+                fecha=fecha_bcv
+            )
+
+            for s in self.__servidores:
+                if s.get("url"):
+                    try:
+                        payload = self.__vista.crear_mensaje_embed(tasa_actual, s["color"])
+                        requests.post(s["url"], json=payload, timeout=5)
+                    except requests.RequestException as e:
+                        print(f"Ocurrió un error enviando datos al webhook: {e}")
+
+            self.__modelo.registrar_nueva_tasa(tasa_actual)
+
+        except AttributeError as e:
+            print(f"Error de estructura HTML (falta un atributo esperado): {e}")
+        except Exception as e:
+            print(f"Error inesperado en la ejecución del controlador: {e}")
+
 
 # ==========================================
 # EJECUCIÓN DEL PROGRAMA
 # ==========================================
 if __name__ == "__main__":
-    TOKEN = os.getenv("DISCORD_BOT_TOKEN")
-    if not TOKEN:
-        print("Error: No se encontró la variable de entorno DISCORD_BOT_TOKEN.")
-    else:
-        bot.run(TOKEN)
+    modelo_bcv = BCVModel()
+    vista_discord = DiscordView()
+    
+    bot = BotController(modelo_bcv, vista_discord)
+    bot.ejecutar()
